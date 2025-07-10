@@ -4,6 +4,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() => runApp(const CurrencyConverterApp());
 
@@ -11,37 +12,33 @@ class CurrencyConverterApp extends StatelessWidget {
   const CurrencyConverterApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: const CurrencyConverterPage(),
-      theme: ThemeData(
-        scaffoldBackgroundColor: const Color(0xFFF5F5F2),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(
-            vertical: 12,
-            horizontal: 16,
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide.none,
-          ),
+  Widget build(BuildContext context) => MaterialApp(
+    debugShowCheckedModeBanner: false,
+    home: const CurrencyConverterPage(),
+    theme: ThemeData(
+      scaffoldBackgroundColor: const Color(0xFFF5F5F2),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 12,
+          horizontal: 16,
         ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF737373),
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide.none,
         ),
       ),
-    );
-  }
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF737373),
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      ),
+    ),
+  );
 }
 
 class CurrencyConverterPage extends StatefulWidget {
@@ -52,8 +49,8 @@ class CurrencyConverterPage extends StatefulWidget {
 }
 
 class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
-  static const String _version = '1.0';
-  final TextEditingController _amountController = TextEditingController();
+  static const _version = '1.1';
+  final _amountController = TextEditingController();
   String _from = 'United States - USD';
   String _to = 'Thailand - THB';
   Map<String, double> _rates = {};
@@ -61,7 +58,7 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
   double? _result;
   bool _loading = false;
 
-  static const Map<String, String> _currencyMap = {
+  static const _currencyMap = {
     'Australia': 'AUD',
     'Canada': 'CAD',
     'China': 'CNY',
@@ -85,41 +82,60 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
   };
 
   List<String> get _countries {
-    final list = _currencyMap.keys.toList()..sort();
-    return list.map((c) => '$c - ${_currencyMap[c]}').toList();
+    final keys = _currencyMap.keys.toList()..sort();
+    return keys.map((c) => '$c - ${_currencyMap[c]}').toList();
   }
 
   @override
-  void dispose() {
-    _amountController.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    _loadCache();
+  }
+
+  Future<void> _loadCache() async {
+    final prefs = await SharedPreferences.getInstance();
+    final json = prefs.getString('rates');
+    final ts = prefs.getString('updated');
+    if (json != null && ts != null) {
+      final data = jsonDecode(json) as Map<String, dynamic>;
+      setState(() {
+        _rates = data.map((k, v) => MapEntry(k, (v as num).toDouble()));
+        _lastUpdated = DateTime.tryParse(ts);
+      });
+    }
   }
 
   Future<void> _fetchRates() async {
     setState(() => _loading = true);
     final conn = await Connectivity().checkConnectivity();
     if (conn == ConnectivityResult.none) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('No internet connection')));
+      final msg = _rates.isNotEmpty
+          ? 'Offline: using cached rates'
+          : 'No internet and no cache';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
       setState(() => _loading = false);
       return;
     }
     try {
-      final fromCode = _from.split(' - ').last;
-      final uri = Uri.https('open.er-api.com', '/v6/latest/$fromCode');
-      final resp = await http.get(uri).timeout(const Duration(seconds: 8));
-      if (resp.statusCode != 200) throw 'HTTP ${resp.statusCode}';
-      final data = jsonDecode(resp.body) as Map<String, dynamic>;
-      if (data['result'] != 'success' || data['rates'] == null)
-        throw 'API error';
-      final entries = (data['rates'] as Map<String, dynamic>).entries.map(
+      final code = _from.split(' - ').last;
+      final uri = Uri.https('open.er-api.com', '/v6/latest/$code');
+      final res = await http.get(uri).timeout(const Duration(seconds: 8));
+      if (res.statusCode != 200) throw 'HTTP ${res.statusCode}';
+      final map = jsonDecode(res.body) as Map<String, dynamic>;
+      if (map['result'] != 'success' || map['rates'] == null) throw 'API error';
+      final entries = (map['rates'] as Map<String, dynamic>).entries.map(
         (e) => MapEntry(e.key, (e.value as num).toDouble()),
       );
+      final prefs = await SharedPreferences.getInstance();
       setState(() {
         _rates = Map.fromEntries(entries);
         _lastUpdated = DateTime.now();
       });
+      prefs.remove('rates');
+      prefs.remove('updated');
+      prefs.setString('rates', jsonEncode(_rates));
+      prefs.setString('updated', _lastUpdated!.toIso8601String());
+      ('updated', _lastUpdated!.toIso8601String());
     } catch (e) {
       ScaffoldMessenger.of(
         context,
@@ -162,17 +178,17 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
 
   @override
   Widget build(BuildContext context) {
-    final lastText = _lastUpdated == null
+    final last = _lastUpdated == null
         ? ''
         : 'Updated: ${DateFormat('d MMM yyyy HH:mm').format(_lastUpdated!)}';
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
         title: const Text(
           'Currency Converter',
           style: TextStyle(color: Colors.black),
         ),
-        backgroundColor: Colors.white,
-        elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
       ),
       body: SafeArea(
@@ -183,19 +199,17 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Amount
                 Card(
+                  elevation: 4,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  elevation: 4,
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Amount', style: TextStyle(fontSize: 16)),
-                        const SizedBox(height: 8),
+                        const Text('Amount'),
                         TextField(
                           controller: _amountController,
                           keyboardType: const TextInputType.numberWithOptions(
@@ -217,12 +231,11 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                // From
                 Card(
+                  elevation: 4,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  elevation: 4,
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: DropdownButtonFormField<String>(
@@ -246,22 +259,18 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
-                // Swap
                 Center(
                   child: IconButton(
                     icon: const Icon(Icons.swap_horiz, size: 32),
                     onPressed: _swap,
                   ),
                 ),
-                const SizedBox(height: 16),
-                // To & Result
                 Card(
+                  color: const Color(0xFFE8F5E9),
+                  elevation: 2,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  color: const Color(0xFFE8F5E9),
-                  elevation: 2,
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
@@ -303,16 +312,14 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                // Convert
                 ElevatedButton(
                   onPressed: _convert,
                   child: const Text('Convert'),
                 ),
                 const SizedBox(height: 16),
-                // Last updated & rate
-                if (lastText.isNotEmpty) ...[
+                if (last.isNotEmpty) ...[
                   Text(
-                    lastText,
+                    last,
                     textAlign: TextAlign.center,
                     style: const TextStyle(fontSize: 12, color: Colors.black54),
                   ),
@@ -327,7 +334,6 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
                     ),
                 ],
                 const SizedBox(height: 16),
-                // Refresh & Version
                 ElevatedButton(
                   onPressed: _fetchRates,
                   child: _loading
