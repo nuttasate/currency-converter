@@ -9,6 +9,7 @@ void main() => runApp(const CurrencyConverterApp());
 
 class CurrencyConverterApp extends StatelessWidget {
   const CurrencyConverterApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -45,11 +46,13 @@ class CurrencyConverterApp extends StatelessWidget {
 
 class CurrencyConverterPage extends StatefulWidget {
   const CurrencyConverterPage({super.key});
+
   @override
   State<CurrencyConverterPage> createState() => _CurrencyConverterPageState();
 }
 
 class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
+  static const String _version = '1.0';
   final TextEditingController _amountController = TextEditingController();
   String _from = 'United States - USD';
   String _to = 'Thailand - THB';
@@ -180,6 +183,7 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // Amount
                 Card(
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -213,6 +217,7 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
                   ),
                 ),
                 const SizedBox(height: 16),
+                // From
                 Card(
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -220,36 +225,29 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
                   elevation: 4,
                   child: Padding(
                     padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('From', style: TextStyle(fontSize: 16)),
-                        const SizedBox(height: 8),
-                        DropdownButtonFormField<String>(
-                          value: _from,
-                          isExpanded: true,
-                          decoration: const InputDecoration(),
-                          items: _countries
-                              .map(
-                                (c) =>
-                                    DropdownMenuItem(value: c, child: Text(c)),
-                              )
-                              .toList(),
-                          onChanged: (v) {
-                            setState(() {
-                              _from = v!;
-                              _rates.clear();
-                              _result = null;
-                              _lastUpdated = null;
-                            });
-                            _fetchRates();
-                          },
-                        ),
-                      ],
+                    child: DropdownButtonFormField<String>(
+                      value: _from,
+                      isExpanded: true,
+                      decoration: const InputDecoration(),
+                      items: _countries
+                          .map(
+                            (c) => DropdownMenuItem(value: c, child: Text(c)),
+                          )
+                          .toList(),
+                      onChanged: (v) {
+                        setState(() {
+                          _from = v!;
+                          _rates.clear();
+                          _result = null;
+                          _lastUpdated = null;
+                        });
+                        _fetchRates();
+                      },
                     ),
                   ),
                 ),
                 const SizedBox(height: 16),
+                // Swap
                 Center(
                   child: IconButton(
                     icon: const Icon(Icons.swap_horiz, size: 32),
@@ -257,6 +255,7 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
                   ),
                 ),
                 const SizedBox(height: 16),
+                // To & Result
                 Card(
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -268,8 +267,6 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('To', style: TextStyle(fontSize: 16)),
-                        const SizedBox(height: 8),
                         DropdownButtonFormField<String>(
                           value: _to,
                           isExpanded: true,
@@ -306,11 +303,13 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
                   ),
                 ),
                 const SizedBox(height: 16),
+                // Convert
                 ElevatedButton(
                   onPressed: _convert,
                   child: const Text('Convert'),
                 ),
                 const SizedBox(height: 16),
+                // Last updated & rate
                 if (lastText.isNotEmpty) ...[
                   Text(
                     lastText,
@@ -327,7 +326,8 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
                       ),
                     ),
                 ],
-                const SizedBox(height: 32),
+                const SizedBox(height: 16),
+                // Refresh & Version
                 ElevatedButton(
                   onPressed: _fetchRates,
                   child: _loading
@@ -341,6 +341,13 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
                         )
                       : const Text('Refresh Rates'),
                 ),
+                const SizedBox(height: 8),
+                Text(
+                  'v$_version',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                ),
+                const SizedBox(height: 32),
               ],
             ),
           ),
