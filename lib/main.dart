@@ -83,7 +83,7 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
 
   List<String> get _countries {
     final list = _currencyMap.keys.toList()..sort();
-    return list.map((c) => "$c - ${_currencyMap[c]}").toList();
+    return list.map((c) => '$c - ${_currencyMap[c]}').toList();
   }
 
   @override
@@ -162,7 +162,6 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
     final lastText = _lastUpdated == null
         ? ''
         : 'Updated: ${DateFormat('d MMM yyyy HH:mm').format(_lastUpdated!)}';
-
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -174,160 +173,176 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
         iconTheme: const IconThemeData(color: Colors.black),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 4,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Amount', style: TextStyle(fontSize: 16)),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: _amountController,
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        decoration: InputDecoration(
-                          hintText: 'Enter amount',
-                          suffixIcon: IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              _amountController.clear();
-                              setState(() => _result = null);
-                            },
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Card(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 4,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Amount', style: TextStyle(fontSize: 16)),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _amountController,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          decoration: InputDecoration(
+                            hintText: 'Enter amount',
+                            suffixIcon: IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _amountController.clear();
+                                setState(() => _result = null);
+                              },
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 4,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('From', style: TextStyle(fontSize: 16)),
-                      const SizedBox(height: 8),
-                      DropdownButtonFormField<String>(
-                        value: _from,
-                        isExpanded: true,
-                        decoration: const InputDecoration(),
-                        items: _countries
-                            .map(
-                              (c) => DropdownMenuItem(value: c, child: Text(c)),
-                            )
-                            .toList(),
-                        onChanged: (v) {
-                          setState(() {
-                            _from = v!;
-                            _rates.clear();
-                            _result = null;
-                            _lastUpdated = null;
-                          });
-                          _fetchRates();
-                        },
-                      ),
-                    ],
+                const SizedBox(height: 16),
+                Card(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 4,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('From', style: TextStyle(fontSize: 16)),
+                        const SizedBox(height: 8),
+                        DropdownButtonFormField<String>(
+                          value: _from,
+                          isExpanded: true,
+                          decoration: const InputDecoration(),
+                          items: _countries
+                              .map(
+                                (c) =>
+                                    DropdownMenuItem(value: c, child: Text(c)),
+                              )
+                              .toList(),
+                          onChanged: (v) {
+                            setState(() {
+                              _from = v!;
+                              _rates.clear();
+                              _result = null;
+                              _lastUpdated = null;
+                            });
+                            _fetchRates();
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Center(
-                child: IconButton(
-                  icon: const Icon(Icons.swap_horiz, size: 32),
-                  onPressed: _swap,
+                const SizedBox(height: 16),
+                Center(
+                  child: IconButton(
+                    icon: const Icon(Icons.swap_horiz, size: 32),
+                    onPressed: _swap,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                color: const Color(0xFFE8F5E9),
-                elevation: 2,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('To', style: TextStyle(fontSize: 16)),
-                      const SizedBox(height: 8),
-                      DropdownButtonFormField<String>(
-                        value: _to,
-                        isExpanded: true,
-                        decoration: const InputDecoration(),
-                        items: _countries
-                            .map(
-                              (c) => DropdownMenuItem(value: c, child: Text(c)),
-                            )
-                            .toList(),
-                        onChanged: (v) => setState(() => _to = v!),
-                      ),
-                      const SizedBox(height: 16),
-                      Align(
-                        alignment: Alignment.center,
-                        child: Text(
-                          _result == null
-                              ? '0.00 ${_to.split(' - ').last}'
-                              : '${_result!.toStringAsFixed(2)} ${_to.split(' - ').last}',
-                          style: const TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF2E7D32),
+                const SizedBox(height: 16),
+                Card(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  color: const Color(0xFFE8F5E9),
+                  elevation: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('To', style: TextStyle(fontSize: 16)),
+                        const SizedBox(height: 8),
+                        DropdownButtonFormField<String>(
+                          value: _to,
+                          isExpanded: true,
+                          decoration: const InputDecoration(),
+                          items: _countries
+                              .map(
+                                (c) =>
+                                    DropdownMenuItem(value: c, child: Text(c)),
+                              )
+                              .toList(),
+                          onChanged: (v) {
+                            setState(() {
+                              _to = v!;
+                              _result = null;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        Align(
+                          alignment: Alignment.center,
+                          child: Text(
+                            _result == null
+                                ? '0.00 ${_to.split(' - ').last}'
+                                : '${_result!.toStringAsFixed(2)} ${_to.split(' - ').last}',
+                            style: const TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF2E7D32),
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(onPressed: _convert, child: const Text('Convert')),
-              const SizedBox(height: 16),
-              if (lastText.isNotEmpty) ...[
-                Text(
-                  lastText,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: _convert,
+                  child: const Text('Convert'),
                 ),
-                if (_rates.containsKey(_to.split(' - ').last))
+                const SizedBox(height: 16),
+                if (lastText.isNotEmpty) ...[
                   Text(
-                    'Rate: 1 ${_from.split(' - ').last} = ${_rates[_to.split(' - ').last]!.toStringAsFixed(2)} ${_to.split(' - ').last}',
+                    lastText,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 12, color: Colors.black87),
+                    style: const TextStyle(fontSize: 12, color: Colors.black54),
                   ),
+                  if (_rates.containsKey(_to.split(' - ').last))
+                    Text(
+                      'Rate: 1 ${_from.split(' - ').last} = ${_rates[_to.split(' - ').last]!.toStringAsFixed(2)} ${_to.split(' - ').last}',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.black87,
+                      ),
+                    ),
+                ],
+                const SizedBox(height: 32),
+                ElevatedButton(
+                  onPressed: _fetchRates,
+                  child: _loading
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('Refresh Rates'),
+                ),
               ],
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _fetchRates,
-                child: _loading
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Text('Refresh Rates'),
-              ),
-            ],
+            ),
           ),
         ),
       ),
